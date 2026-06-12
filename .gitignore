@@ -1,0 +1,41 @@
+# Flutter
+**/flutter/**/.packages
+**/flutter/**/.pub/
+**/flutter/**/build/
+**/flutter/**/.dart_tool/
+**/flutter/**/*.iml
+**/flutter/**/.idea/
+**/flutter/**/.metadata
+**/flutter/**/.flutter-plugins
+**/flutter/**/.flutter-plugins-dependencies
+**/flutter/**/ios/Pods/
+**/flutter/**/ios/.symlinks/
+**/flutter/**/android/.gradle/
+**/flutter/**/android/app/build/
+**/flutter/**/android/local.properties
+**/flutter/**/*.jks
+**/flutter/**/*.keystore
+
+# Rust
+**/target/
+**/Cargo.lock
+
+# Docker
+**/deploy/.env
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temp
+temp/
+*.tmp
