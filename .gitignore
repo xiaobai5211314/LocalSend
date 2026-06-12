@@ -20,6 +20,16 @@
 **/target/
 **/Cargo.lock
 
+# Nested local Flutter SDKs / broken trees
+flutter/
+flutter_broken_20260611_213744/
+flutter_broken_20260611_225846/
+
+# Flutter app build outputs
+**/build/
+localsend_app/build/
+localsend_app/.flutter-plugins-dependencies
+
 # Docker
 **/deploy/.env
 *.log
