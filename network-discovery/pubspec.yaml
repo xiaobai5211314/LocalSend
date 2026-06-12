@@ -1,0 +1,17 @@
+name: network_discovery
+description: LocalSend multi-NIC network discovery and hotspot optimization.
+version: 0.1.0
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  network_info_plus: ^4.1.0
+  ping_discover_network: ^0.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0

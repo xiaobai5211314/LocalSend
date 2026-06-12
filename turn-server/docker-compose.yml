@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  coturn:
+    image: coturn/coturn:4.6-alpine
+    container_name: localsend-turn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command:
+      - turnserver
+      - -c
+      - /etc/coturn/turnserver.conf
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

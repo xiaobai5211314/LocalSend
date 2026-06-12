@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # ---- Signaling Server (Rust WebSocket) ----
+  signaling:
+    build:
+      context: ../signaling-server
+      dockerfile: ../signaling-server/Dockerfile
+    container_name: localsend-signaling
+    restart: unless-stopped
+    ports:
+      - "${SIGNALING_PORT:-9000}:9000"
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - localsend-net
+
+  # ---- TURN Server (coturn) ----
+  coturn:
+    image: coturn/coturn:4.6-alpine
+    container_name: localsend-turn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ../turn-server/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    environment:
+      - TURN_USERNAME=${TURN_USERNAME}
+      - TURN_PASSWORD=${TURN_PASSWORD}
+    command:
+      - turnserver
+      - -c
+      - /etc/coturn/turnserver.conf
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  localsend-net:
+    driver: bridge
