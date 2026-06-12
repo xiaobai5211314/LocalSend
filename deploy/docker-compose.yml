@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # ---- Signaling Server (Rust WebSocket) ----
   signaling:
     build:
       context: ../signaling-server
@@ -10,6 +9,9 @@ services:
     restart: unless-stopped
     ports:
       - "${SIGNALING_PORT:-9000}:9000"
+      - "9001:9001"
+    volumes:
+      - localsend-uploads:/var/lib/localsend/uploads
     environment:
       - RUST_LOG=${RUST_LOG:-info}
     logging:
@@ -20,7 +22,6 @@ services:
     networks:
       - localsend-net
 
-  # ---- TURN Server (coturn) ----
   coturn:
     image: coturn/coturn:4.6-alpine
     container_name: localsend-turn
@@ -40,6 +41,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  localsend-uploads:
 
 networks:
   localsend-net:

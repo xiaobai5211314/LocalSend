@@ -1,66 +1,51 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class FileTransferService {
-  HttpServer? _server;
-  String? _localIp;
-  int _port = 0;
-  String? _token;
-  final Map<String, _ServedFile> _servedFiles = {};
+  final String serverBaseUrl;
 
-  int get port => _port;
-  String? get localIp => _localIp;
+  FileTransferService({required this.serverBaseUrl});
 
-  Future<void> _ensureServer() async {
-    if (_server != null) return;
-    _token = DateTime.now().millisecondsSinceEpoch.toRadixString(16);
-    _localIp = await _getLocalIp();
-    _server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
-    _port = _server!.port;
+  /// Upload file to server, return {fileId, downloadUrl}
+  Future<Map<String, dynamic>> uploadFile(String filePath) async {
+    final file = File(filePath);
+    if (!await file.exists()) throw Exception('File not found: $filePath');
 
-    _server!.listen((request) async {
-      final uri = request.uri;
-      if (uri.queryParameters['token'] != _token) {
-        request.response.statusCode = 403;
-        await request.response.close();
-        return;
-      }
+    final request = http.StreamedRequest('POST', Uri.parse('$serverBaseUrl/api/upload'));
+    final fileLength = await file.length();
+    request.contentLength = fileLength;
+    file.openRead().listen(
+      (chunk) => request.sink.add(chunk),
+      onDone: () => request.sink.close(),
+      onError: (e) => request.sink.addError(e),
+    );
 
-      if (uri.path.startsWith('/file/') && request.method == 'GET') {
-        final fileId = uri.path.substring('/file/'.length);
-        final info = _servedFiles[fileId];
-        if (info == null) {
-          request.response.statusCode = 404;
-          await request.response.close();
-          return;
-        }
-        final file = File(info.path);
-        if (!await file.exists()) {
-          request.response.statusCode = 404;
-          await request.response.close();
-          return;
-        }
-        request.response.headers.contentType = ContentType.binary;
-        request.response.headers.contentLength = await file.length();
-        await file.openRead().pipe(request.response);
-      } else {
-        request.response.statusCode = 404;
-        await request.response.close();
-      }
-    });
+    final streamedResponse = await request.send().timeout(Duration(minutes: 10));
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      throw Exception('Upload failed: ${response.statusCode} ${response.body}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final fileId = data['file_id'] as String;
+    final size = data['size'] as int;
+
+    return {
+      'file_id': fileId,
+      'download_url': '$serverBaseUrl/api/files/$fileId',
+      'size': size,
+    };
   }
 
-  Future<String> serveFile(String filePath) async {
-    await _ensureServer();
-    final fileId = DateTime.now().millisecondsSinceEpoch.toRadixString(16);
-    _servedFiles[fileId] = _ServedFile(path: filePath);
-    return 'http://$_localIp:$_port/file/$fileId?token=$_token';
-  }
-
+  /// Download file from URL to savePath
   static Future<void> downloadFile(String url, String savePath) async {
     final client = HttpClient();
+    client.connectionTimeout = Duration(minutes: 5);
     try {
       final request = await client.getUrl(Uri.parse(url));
-      final response = await request.close();
+      final response = await request.close().timeout(Duration(minutes: 10));
       final file = File(savePath);
       await file.parent.create(recursive: true);
       final sink = file.openWrite();
@@ -70,29 +55,17 @@ class FileTransferService {
     }
   }
 
-  static Future<String?> _getLocalIp() async {
-    for (final interface in await NetworkInterface.list()) {
-      for (final addr in interface.addresses) {
-        if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-          return addr.address;
-        }
-      }
+  /// Check server health
+  Future<bool> checkHealth() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$serverBaseUrl/health'),
+      ).timeout(Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
-    return null;
   }
 
-  void stop() {
-    _server?.close();
-    _server = null;
-    _servedFiles.clear();
-  }
-
-  void dispose() {
-    stop();
-  }
-}
-
-class _ServedFile {
-  final String path;
-  _ServedFile({required this.path});
+  void dispose() {}
 }

@@ -87,6 +87,8 @@ class SignalingClient {
         case 'ice_candidate':
         case 'clipboard_update':
         case 'file_transfer':
+        case 'file_transfer_ack':
+        case 'file_transfer_error':
           _messageController.add(Map<String, dynamic>.from(msg));
           break;
       }
